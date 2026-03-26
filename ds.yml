@@ -1,0 +1,87 @@
+# ---------------- MYSQL DEPLOYMENT ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: webapps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:5.7
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: password
+        - name: MYSQL_DATABASE
+          value: bankdb
+
+---
+# ---------------- MYSQL SERVICE ----------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: webapps
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+  clusterIP: None
+
+---
+# ---------------- BANKAPP DEPLOYMENT ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bankapp
+  namespace: webapps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bankapp
+  template:
+    metadata:
+      labels:
+        app: bankapp
+    spec:
+      serviceAccountName: bankapp-sa
+      containers:
+      - name: bankapp
+        image: sivasaireddy26/bankapp:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:mysql://mysql:3306/bankdb
+        - name: SPRING_DATASOURCE_USERNAME
+          value: root
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: password
+
+---
+# ---------------- BANKAPP SERVICE ----------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: bankapp-service
+  namespace: webapps
+spec:
+  type: LoadBalancer
+  selector:
+    app: bankapp
+  ports:
+    - port: 80
+      targetPort: 8080
